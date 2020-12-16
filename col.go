@@ -478,6 +478,47 @@ func (f *File) SetColWidth(sheet, startcol, endcol string, width float64) error 
 	return err
 }
 
+// Set the column to auto-fit width
+func (f *File) SetColAutoWidth(sheet, startcol, endcol string) error {
+	min, err := ColumnNameToNumber(startcol)
+	if err != nil {
+		return err
+	}
+	max, err := ColumnNameToNumber(endcol)
+	if err != nil {
+		return err
+	}
+	if min > max {
+		min, max = max, min
+	}
+
+	ws, err := f.workSheetReader(sheet)
+	if err != nil {
+		return err
+	}
+	col := xlsxCol{
+		Min:         min,
+		Max:         max,
+		CustomWidth: false,
+		BestFit:     true,
+	}
+	if ws.Cols == nil {
+		cols := xlsxCols{}
+		cols.Col = append(cols.Col, col)
+		ws.Cols = &cols
+		return err
+	}
+	ws.Cols.Col = flatCols(col, ws.Cols.Col, func(fc, c xlsxCol) xlsxCol {
+		fc.Collapsed = c.Collapsed
+		fc.Hidden = c.Hidden
+		fc.OutlineLevel = c.OutlineLevel
+		fc.Phonetic = c.Phonetic
+		fc.Style = c.Style
+		return fc
+	})
+	return err
+}
+
 // flatCols provides a method for the column's operation functions to flatten
 // and check the worksheet columns.
 func flatCols(col xlsxCol, cols []xlsxCol, replacer func(fc, c xlsxCol) xlsxCol) []xlsxCol {
